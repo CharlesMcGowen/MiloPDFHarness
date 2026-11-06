@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.kdbx
+credentials.*
+secrets.*
+
+# Runtime data must never be committed
+var/
+data/
+uploads/
+outputs/
+logs/
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.log
+*.pdf
+
+# Models and generated artifacts
+models/
+checkpoints/
+hf_cache/
+hf_models/
+cache/
+*.bin
+*.gguf
+*.safetensors
+
+# Build output
+build/
+dist/

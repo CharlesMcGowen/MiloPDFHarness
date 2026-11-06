@@ -1,0 +1,26 @@
+services:
+  milo:
+    build: .
+    ports:
+      - "127.0.0.1:8091:8091"
+    environment:
+      MILO_DATABASE_URL: sqlite:////data/milo.sqlite3
+      MILO_INPUT_ROOT: /data/input
+      MILO_OUTPUT_ROOT: /data/output
+      MILO_API_TOKEN: "${MILO_API_TOKEN:?Set MILO_API_TOKEN before starting}"
+      MILO_LLM_BASE_URL: "${MILO_LLM_BASE_URL:-}"
+      MILO_LLM_MODEL: "${MILO_LLM_MODEL:-}"
+      MILO_LLM_API_KEY: "${MILO_LLM_API_KEY:-}"
+    volumes:
+      - milo-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  milo-data:
