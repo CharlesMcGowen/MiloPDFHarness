@@ -9,6 +9,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from .adapters import parse_adapter_names, run_adapters
+from .benchmark import load_manifest, run_benchmark, write_report
 from .config import Settings
 from .converter import PDFConverter
 from .feedback import FeedbackStore, feedback_to_dict
@@ -85,6 +87,39 @@ async def _reprocess(args: argparse.Namespace) -> int:
     return 0
 
 
+def _enrich(args: argparse.Namespace) -> int:
+    settings = Settings.from_env()
+    names = parse_adapter_names(args.adapters)
+    output_root = Path(args.output_dir).resolve() if args.output_dir else settings.output_root
+    results = run_adapters(args.input, names=names, output_root=output_root)
+    _print({"input": str(Path(args.input).resolve()), "adapters": results})
+    return 0 if all(item["status"] == "ok" for item in results) else 1
+
+
+async def _benchmark(args: argparse.Namespace) -> int:
+    settings, _, converter, _ = _components()
+    manifest = load_manifest(args.manifest)
+    names = parse_adapter_names(args.adapters)
+    benchmark_root = settings.input_root.parent / "benchmarks"
+    cache_root = Path(args.cache_dir).resolve() if args.cache_dir else benchmark_root / "cache"
+    output_root = Path(args.output_dir).resolve() if args.output_dir else benchmark_root / "output"
+    report_path = (
+        Path(args.report).resolve()
+        if args.report
+        else settings.output_root / f"{manifest.suite}.report.json"
+    )
+    report = await run_benchmark(
+        converter=converter,
+        manifest=manifest,
+        cache_root=cache_root,
+        output_root=output_root,
+        adapter_names=names,
+    )
+    write_report(report_path, report)
+    _print({**report, "report_path": str(report_path)})
+    return 0 if report["passed"] else 1
+
+
 def _serve(args: argparse.Namespace) -> int:
     settings = Settings.from_env()
     if args.host not in {"127.0.0.1", "::1", "localhost"} and not settings.api_token:
@@ -136,6 +171,18 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("stats", help="show feedback statistics")
     commands.add_parser("decoders", help="show learned decoder rankings")
 
+    enrich = commands.add_parser("enrich", help="run optional local PDF adapters")
+    enrich.add_argument("input")
+    enrich.add_argument("--adapters", required=True, help="comma-separated: camelot,docling")
+    enrich.add_argument("--output-dir")
+
+    benchmark = commands.add_parser("benchmark", help="run a PDF benchmark manifest")
+    benchmark.add_argument("manifest")
+    benchmark.add_argument("--adapters", default="")
+    benchmark.add_argument("--cache-dir")
+    benchmark.add_argument("--output-dir")
+    benchmark.add_argument("--report")
+
     serve = commands.add_parser("serve", help="run the HTTP API")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8091)
@@ -154,6 +201,10 @@ def main(argv: list[str] | None = None) -> int:
         return _feedback(args)
     if args.command == "reprocess":
         return asyncio.run(_reprocess(args))
+    if args.command == "enrich":
+        return _enrich(args)
+    if args.command == "benchmark":
+        return asyncio.run(_benchmark(args))
     if args.command == "stats":
         _, store, _, _ = _components()
         _print(store.stats())

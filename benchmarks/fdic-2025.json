@@ -1,0 +1,79 @@
+{
+  "suite": "fdic-2025",
+  "allowed_hosts": ["www.fdic.gov"],
+  "documents": [
+    {
+      "id": "fdic-q1-2025",
+      "url": "https://www.fdic.gov/quarterly-banking-profile/q1-2025-full-qbp-report.pdf",
+      "filename": "fdic-q1-2025.pdf",
+      "sha256": "4c3e04197a5a4721b20ce8a148f16cf04d8dcffd80ba1bb97c5116718dbf33fb",
+      "expected_pages": 42,
+      "expected_document_type": "financial",
+      "minimum_quality": 0.85,
+      "maximum_credit_card_like": 0,
+      "minimum_likely_visual_pages": 1,
+      "minimum_adapter_items": {"camelot": 1},
+      "required_patterns": [
+        {"id": "net_income", "pattern": "quarterly net income.{0,120}\\$70\\.6\\s+billion"},
+        {"id": "return_on_assets", "pattern": "return on assets.{0,80}1\\.16 percent"},
+        {"id": "dif_balance", "pattern": "Deposit Insurance Fund.{0,180}\\$140\\.9\\s+billion"},
+        {"id": "reserve_ratio", "pattern": "reserve ratio.{0,100}1\\.31 percent"}
+      ]
+    },
+    {
+      "id": "fdic-q2-2025",
+      "url": "https://www.fdic.gov/quarterly-banking-profile/quarterly-banking-profile-second-quarter-2025-pdf.pdf",
+      "filename": "fdic-q2-2025.pdf",
+      "sha256": "9eb27e3208f4bab992433ee8110bc5eb7d7d11c301919fedae54cc1d0918959d",
+      "expected_pages": 49,
+      "expected_document_type": "financial",
+      "minimum_quality": 0.85,
+      "maximum_credit_card_like": 0,
+      "minimum_likely_visual_pages": 1,
+      "minimum_adapter_items": {"camelot": 1},
+      "required_patterns": [
+        {"id": "net_income", "pattern": "net income.{0,120}\\$69\\.9\\s+billion"},
+        {"id": "return_on_assets", "pattern": "return on assets.{0,80}1\\.13 percent"},
+        {"id": "dif_balance", "pattern": "Deposit Insurance Fund.{0,180}\\$145\\.3\\s+billion"},
+        {"id": "reserve_ratio", "pattern": "reserve ratio.{0,100}1\\.36 percent"}
+      ]
+    },
+    {
+      "id": "fdic-q3-2025",
+      "url": "https://www.fdic.gov/quarterly-banking-profile/quarterly-banking-profile-third-quarter-2025-pdf.pdf",
+      "filename": "fdic-q3-2025.pdf",
+      "sha256": "cc259fc1b3abdec2c9d24d7710c0321d9ed3b2749480ca9d3ec4287549016fad",
+      "expected_pages": 47,
+      "expected_document_type": "financial",
+      "minimum_quality": 0.85,
+      "maximum_credit_card_like": 0,
+      "minimum_likely_visual_pages": 1,
+      "minimum_adapter_items": {"camelot": 1},
+      "required_patterns": [
+        {"id": "net_income", "pattern": "net income.{0,120}\\$79\\.3\\s+billion"},
+        {"id": "return_on_assets", "pattern": "return on assets.{0,80}1\\.27 percent"},
+        {"id": "dif_balance", "pattern": "Deposit Insurance Fund.{0,180}\\$150\\.1\\s+billion"},
+        {"id": "reserve_ratio", "pattern": "reserve ratio.{0,100}1\\.40 percent"}
+      ]
+    },
+    {
+      "id": "fdic-q4-2025",
+      "url": "https://www.fdic.gov/pdf-fdic-quarterly-banking-profile-fourth-quarter-2025.pdf",
+      "filename": "fdic-q4-2025.pdf",
+      "sha256": "279cd9e33eafb9f38cc25291e3cd482bb4c6693166d743857cc065e59c5744f0",
+      "expected_pages": 22,
+      "expected_document_type": "financial",
+      "minimum_quality": 0.85,
+      "maximum_credit_card_like": 0,
+      "minimum_likely_visual_pages": 1,
+      "minimum_adapter_items": {"camelot": 0},
+      "required_patterns": [
+        {"id": "quarterly_net_income", "pattern": "quarterly net income.{0,120}\\$77\\.7\\s+billion"},
+        {"id": "return_on_assets", "pattern": "ROA.{0,100}1\\.24 percent"},
+        {"id": "full_year_net_income", "pattern": "net income.{0,120}\\$295\\.6\\s+billion"},
+        {"id": "dif_balance", "pattern": "\\$153\\.9 billion.{0,100}December 31, 2025"},
+        {"id": "reserve_ratio", "pattern": "reserve ratio.{0,100}1\\.42 percent"}
+      ]
+    }
+  ]
+}

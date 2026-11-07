@@ -135,7 +135,10 @@ class PDFConverter:
         content_detection = {
             "redactions": self._detect_redactions(selected.text),
             "sensitive_data": self._detect_sensitive_data(selected.text),
+            "visual_content": self._detect_visual_content(path, selected.pages),
         }
+        if content_detection["visual_content"]["likely_chart_or_figure_page_count"]:
+            warnings.append("likely_chart_or_figure_pages_require_structured_extraction")
         candidate_scores = {
             item.decoder: item.assessment.overall_quality for item in candidates if item.assessment
         }
@@ -310,7 +313,6 @@ class PDFConverter:
         patterns = {
             "email": r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
             "ipv4": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
-            "credit_card_like": r"\b(?:\d[ -]*?){13,19}\b",
             "api_key_like": r"\b(?:sk-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{30,})\b",
             "private_key_header": r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
         }
@@ -318,6 +320,10 @@ class PDFConverter:
             name: len(re.findall(pattern, text, re.IGNORECASE))
             for name, pattern in patterns.items()
         }
+        counts["credit_card_like"] = sum(
+            PDFConverter._is_credit_card_candidate(match.group(0))
+            for match in re.finditer(r"(?<!\d)(?:\d[ -]?){12,18}\d(?!\d)", text)
+        )
         return {
             "detected_categories": sorted(name for name, count in counts.items() if count),
             "counts": counts,
@@ -325,18 +331,105 @@ class PDFConverter:
         }
 
     @staticmethod
+    def _is_credit_card_candidate(value: str) -> bool:
+        stripped = value.strip()
+        digits = re.sub(r"[ -]", "", stripped)
+        if not digits.isdigit() or not 13 <= len(digits) <= 19:
+            return False
+        groups = [item for item in re.split(r"[ -]+", stripped) if item]
+        if len(groups) > 1:
+            allowed_shapes = {(4, 4, 4, 4), (4, 6, 5), (4, 4, 4, 3)}
+            if tuple(map(len, groups)) not in allowed_shapes:
+                return False
+            if all(len(group) == 4 and 1900 <= int(group) <= 2099 for group in groups):
+                return False
+        checksum = 0
+        parity = len(digits) % 2
+        for index, character in enumerate(digits):
+            number = int(character)
+            if index % 2 == parity:
+                number *= 2
+                if number > 9:
+                    number -= 9
+            checksum += number
+        return checksum % 10 == 0
+
+    @staticmethod
     def _classify_document(text: str) -> str:
-        sample = text[:20_000].lower()
+        sample = text[:40_000].lower()
         categories = {
-            "research_paper": ("abstract", "methodology", "references", "conclusion"),
-            "legal": ("agreement", "party", "whereas", "liability"),
-            "financial": ("balance sheet", "revenue", "fiscal", "cash flow"),
-            "technical": ("api", "configuration", "implementation", "architecture"),
-            "report": ("executive summary", "findings", "recommendations"),
+            "financial": {
+                "quarterly banking profile": 5,
+                "deposit insurance fund": 4,
+                "return on assets": 4,
+                "balance sheet": 3,
+                "cash flow": 3,
+                "net income": 3,
+                "net interest margin": 3,
+                "revenue": 2,
+                "fiscal": 2,
+                "loans": 1,
+                "deposits": 1,
+            },
+            "research_paper": {
+                "abstract": 3,
+                "methodology": 2,
+                "references": 2,
+                "conclusion": 1,
+            },
+            "legal": {"agreement": 2, "party": 1, "whereas": 3, "liability": 1},
+            "technical": {
+                "api": 2,
+                "configuration": 2,
+                "implementation": 2,
+                "architecture": 2,
+            },
+            "report": {"executive summary": 3, "findings": 2, "recommendations": 2},
         }
-        scored = {name: sum(term in sample for term in terms) for name, terms in categories.items()}
+        scored = {
+            name: sum(weight for term, weight in terms.items() if term in sample)
+            for name, terms in categories.items()
+        }
         winner = max(scored, key=scored.get)
         return winner if scored[winner] else "unknown"
+
+    @staticmethod
+    def _detect_visual_content(path: Path, pages: list[dict[str, Any]]) -> dict[str, Any]:
+        page_text = {int(page.get("page_number", 0)): str(page.get("text", "")) for page in pages}
+        likely_pages: list[int] = []
+        image_pages = 0
+        drawing_heavy_pages = 0
+        try:
+            import pymupdf
+
+            with pymupdf.open(path) as document:
+                for page_number, page in enumerate(document, start=1):
+                    image_count = len(page.get_images(full=True))
+                    drawing_count = len(page.get_drawings())
+                    text_length = len(page_text.get(page_number, "").strip())
+                    if image_count:
+                        image_pages += 1
+                    if drawing_count >= 20:
+                        drawing_heavy_pages += 1
+                    if (image_count and text_length < 1_200) or (
+                        drawing_count >= 20 and text_length < 2_000
+                    ):
+                        likely_pages.append(page_number)
+        except Exception:
+            return {
+                "analysis_available": False,
+                "image_page_count": 0,
+                "drawing_heavy_page_count": 0,
+                "likely_chart_or_figure_page_count": 0,
+                "likely_chart_or_figure_pages": [],
+            }
+        return {
+            "analysis_available": True,
+            "image_page_count": image_pages,
+            "drawing_heavy_page_count": drawing_heavy_pages,
+            "likely_chart_or_figure_page_count": len(likely_pages),
+            "likely_chart_or_figure_pages": likely_pages[:200],
+        }
 
     @staticmethod
     def _detect_language(text: str) -> str | None:

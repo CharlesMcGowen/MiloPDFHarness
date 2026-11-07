@@ -65,3 +65,19 @@ def test_sensitive_detection_never_returns_values() -> None:
     assert "api_key_like" in result["detected_categories"]
     assert result["matched_values_included"] is False
     assert "alice@example.test" not in str(result)
+
+
+def test_financial_years_are_not_credit_cards() -> None:
+    text = "Chart years: 2019 2020 2021 2022. Test card: 4111 1111 1111 1111."
+    result = PDFConverter._detect_sensitive_data(text)
+
+    assert result["counts"]["credit_card_like"] == 1
+
+
+def test_fdic_report_is_classified_as_financial() -> None:
+    text = (
+        "Quarterly Banking Profile. Net income increased while return on assets improved. "
+        "The Deposit Insurance Fund reserve ratio and net interest margin also increased."
+    )
+
+    assert PDFConverter._classify_document(text) == "financial"

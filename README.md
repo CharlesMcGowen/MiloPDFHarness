@@ -24,6 +24,11 @@ Flow:
 5. Queue weak results for at most three enhanced retries.
 6. Prefer historically stronger decoders on subsequent documents.
 
+Optional enrichment adapters are separate from decoder ranking. Camelot can emit
+structured table JSON, while Docling can emit layout-aware Markdown. They are
+disabled unless explicitly invoked and never send document contents to a hosted
+service.
+
 ## Safety defaults
 
 - The API binds to loopback by default.
@@ -45,6 +50,14 @@ Copy-Item .env.example .env
 milo init
 milo convert .\document.pdf --format json --enhanced
 pytest
+~~~
+
+Install optional public extraction adapters only when needed:
+
+~~~powershell
+python -m pip install -e ".[tables]"   # Camelot
+python -m pip install -e ".[layout]"   # Docling
+# or: python -m pip install -e ".[adapters]"
 ~~~
 
 On Linux or macOS, activate the environment with:
@@ -71,8 +84,36 @@ milo feedback DOCUMENT --type low_quality --reason "table extraction failed" --s
 milo reprocess [--limit 10]
 milo stats
 milo decoders
+milo enrich INPUT.pdf --adapters camelot,docling
+milo benchmark benchmarks/fdic-2025.json
 milo serve [--host 127.0.0.1] [--port 8091]
 ~~~
+
+## FDIC benchmark
+
+`benchmarks/fdic-2025.json` pins four official FDIC Quarterly Banking Profile
+PDFs by SHA-256 and checks page counts, financial classification, visual-page
+detection, false credit-card alerts, extraction quality, and exact facts such as
+net income, return on assets, and Deposit Insurance Fund balances. Downloads,
+decoder output, adapter output, and reports stay under the ignored runtime tree
+unless explicit paths are supplied.
+
+Run the lightweight three-decoder suite:
+
+~~~powershell
+milo benchmark .\benchmarks\fdic-2025.json
+~~~
+
+Run the same assertions with installed adapters. Requested adapters are strict:
+the benchmark fails if one is unavailable or errors.
+
+~~~powershell
+milo benchmark .\benchmarks\fdic-2025.json --adapters camelot,docling
+~~~
+
+Camelot output is bounded to 20,000 cells per document. Docling may download
+public model artifacts on its first local run; review model licenses and prefetch
+artifacts before using it in an air-gapped or commercial environment.
 
 ## API
 

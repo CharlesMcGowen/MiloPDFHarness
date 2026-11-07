@@ -23,6 +23,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+tables = [
+  "camelot-py>=2.0,<3",
+  "fonttools>=4.55",
+]
+layout = [
+  "docling>=2.148,<3",
+]
+adapters = [
+  "camelot-py>=2.0,<3",
+  "docling>=2.148,<3",
+  "fonttools>=4.55",
+]
 dev = [
   "detect-secrets>=1.5",
   "pytest>=8",
